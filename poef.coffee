@@ -1,3 +1,30 @@
+
+update = () ->
+    window.requestAnimationFrame update
+
+
+
+
+canvas = document.createElement 'canvas'
+canvas.width = 512
+canvas.height = 512
+
+context = canvas.getContext '2d'
+
+document.body.appendChild canvas
+
+
+
+
+
+
+
+
+
+
+
+
+
 Array.prototype.remove = (element) ->
 
     index = @indexOf(element)

@@ -1,4 +1,4 @@
-<!DOCTYPE html><html><style>* {
+* {
     margin: 0;
     padding: 0;
 }
@@ -12,4 +12,3 @@ html, body {
 canvas {
     display: block;
 }
-</style><body></body><script data-main="scripts/main" src="scripts/lib/require.js"></script></html>
