@@ -3,8 +3,10 @@
 var extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
 
-define(['input'], function(input) {
-  var AVATAR, Avatar, Bullet, Element, SCENE, Scene, canvas, context, height, now, resize, time, update, width;
+define(['input', 'element', 'physics', 'random'], function(input, element, physics, random) {
+  var AVATAR, Avatar, BadPussyCat, Bullet, CONTEXT, Element, Node, SCENE, Spawn, canvas, context, height, now, resize, time, update, width;
+  Node = element.Node;
+  Element = element.Element;
   console.log("da kitty has started");
   Array.prototype.remove = function(element) {
     var index;
@@ -15,6 +17,7 @@ define(['input'], function(input) {
   };
   canvas = document.createElement('canvas');
   context = canvas.getContext('2d');
+  CONTEXT = canvas.getContext('2d');
   width = function() {
     return window.innerWidth;
   };
@@ -39,87 +42,11 @@ define(['input'], function(input) {
     difference = _now - now;
     if (difference) {
       context.clearRect(0, 0, canvas.width, canvas.height);
-      SCENE.update(difference / 1000.0);
+      SCENE._update(CONTEXT, difference / 1000.0);
       now = _now;
     }
     return window.requestAnimationFrame(update);
   };
-  Scene = (function() {
-    function Scene() {
-      this.elements = [];
-      this._add = [];
-      this._remove = [];
-    }
-
-    Scene.prototype.update = function(t) {
-      var element, i, j, k, len, len1, len2, ref, ref1, ref2, results;
-      ref = this._add;
-      for (i = 0, len = ref.length; i < len; i++) {
-        element = ref[i];
-        console.log("ADD", element._id, element.constructor.name);
-        element._scene = this;
-        this.elements.push(element);
-      }
-      ref1 = this._remove;
-      for (j = 0, len1 = ref1.length; j < len1; j++) {
-        element = ref1[j];
-        console.log("REMOVE", element._id, element.constructor.name);
-        element._scene = void 0;
-        this.elements.remove(element);
-      }
-      this._add = [];
-      this._remove = [];
-      ref2 = this.elements;
-      results = [];
-      for (k = 0, len2 = ref2.length; k < len2; k++) {
-        element = ref2[k];
-        results.push(element.update(t));
-      }
-      return results;
-    };
-
-    Scene.prototype.addElement = function(element) {
-      return this._add.push(element);
-    };
-
-    Scene.prototype.removeElement = function(element) {
-      return this._remove.push(element);
-    };
-
-    return Scene;
-
-  })();
-  Element = (function() {
-    Element.auto_id = 0;
-
-    function Element(x, y, width, height) {
-      if (x == null) {
-        x = void 0;
-      }
-      if (y == null) {
-        y = void 0;
-      }
-      if (width == null) {
-        width = void 0;
-      }
-      if (height == null) {
-        height = void 0;
-      }
-      this._id = ++Element.auto_id;
-      this._scene = void 0;
-    }
-
-    Element.prototype["delete"] = function() {
-      return this._scene.removeElement(this);
-    };
-
-    Element.prototype.update = function(t) {
-      return console.warn("Not implemented");
-    };
-
-    return Element;
-
-  })();
   Avatar = (function(superClass) {
     extend(Avatar, superClass);
 
@@ -129,14 +56,10 @@ define(['input'], function(input) {
 
     Avatar.speed = 500;
 
-    Avatar.reload = 100;
+    Avatar.reload = 500;
 
     function Avatar() {
       Avatar.__super__.constructor.call(this, 100, 100, Avatar.width, Avatar.height);
-      this.x = 100;
-      this.y = 100;
-      this.width = Avatar.width;
-      this.height = Avatar.height;
       this.ready = false;
       this.image = new Image();
       this.image.onload = function() {
@@ -148,8 +71,8 @@ define(['input'], function(input) {
       this.last_shot = 0;
     }
 
-    Avatar.prototype.update = function(t) {
-      var speed, x, y;
+    Avatar.prototype.update = function(ctx, t) {
+      var reloading, speed, x, y;
       x = this.x;
       y = this.y;
       speed = this.speed * t;
@@ -174,8 +97,18 @@ define(['input'], function(input) {
         this.checkImage();
       }
       if (this.ready) {
-        return context.drawImage(this.image, this.x, this.y);
+        ctx.drawImage(this.image, 0, 0);
       }
+      reloading = time() - this.last_shot;
+      if (reloading <= 0) {
+        reloading = 0;
+      } else if (reloading >= this.reload) {
+        reloading = 1;
+      } else {
+        reloading /= this.reload;
+      }
+      ctx.fillStyle = "#75331F";
+      return ctx.fillRect(0, this.height - 10, this.width * (1 - reloading), 10);
     };
 
     Avatar.prototype.checkImage = function() {
@@ -190,7 +123,7 @@ define(['input'], function(input) {
 
     Avatar.prototype.shoot = function() {
       this.last_shot = time();
-      return this._scene.addElement(new Bullet(this.x + this.width, this.y + this.height / 2));
+      return this.parent.addNode(new Bullet(this.x + this.width, this.y + this.height / 2));
     };
 
     return Avatar;
@@ -206,10 +139,7 @@ define(['input'], function(input) {
     Bullet.speed = 1000;
 
     function Bullet(x, y) {
-      this.x = x;
-      this.y = y;
-      this.width = Bullet.width;
-      this.height = Bullet.height;
+      Bullet.__super__.constructor.call(this, x, y, Bullet.width, Bullet.height);
       this.ready = false;
       this.image = new Image();
       this.image.onload = function() {
@@ -229,7 +159,7 @@ define(['input'], function(input) {
       return this.ready = true;
     };
 
-    Bullet.prototype.update = function(t) {
+    Bullet.prototype.update = function(ctx, t) {
       if (!this.ready) {
         this.checkImage();
       }
@@ -238,16 +168,99 @@ define(['input'], function(input) {
         this.checkImage();
       }
       if (this.ready) {
-        return context.drawImage(this.image, this.x, this.y);
+        return ctx.drawImage(this.image, 0, 0);
       }
     };
 
     return Bullet;
 
   })(Element);
-  SCENE = new Scene();
+  Spawn = (function(superClass) {
+    extend(Spawn, superClass);
+
+    function Spawn() {
+      Spawn.__super__.constructor.call(this);
+      this.next = time() + random.int(2000, 1000);
+    }
+
+    Spawn.prototype.update = function() {
+      if (this.next < time()) {
+        this.parent.addNode(new BadPussyCat(width(), random.int(50, height() - 50)));
+        return this.next = time() + random.int(2000, 1000);
+      }
+    };
+
+    return Spawn;
+
+  })(Node);
+  BadPussyCat = (function(superClass) {
+    extend(BadPussyCat, superClass);
+
+    BadPussyCat.width = 50;
+
+    BadPussyCat.height = 50;
+
+    BadPussyCat.speed = 300;
+
+    function BadPussyCat(x, y) {
+      BadPussyCat.__super__.constructor.call(this, x, y, BadPussyCat.width, BadPussyCat.height);
+      this.ready = false;
+      this.image = new Image();
+      this.image.onload = function() {
+        return console.log("IMAGE LOADED BADPUSSYCAT");
+      };
+      this.image.src = "http://placekitten.com/g/" + this.width + "/" + this.height;
+      this.speed = BadPussyCat.speed;
+    }
+
+    BadPussyCat.prototype.checkImage = function() {
+      if (!this.image.complete) {
+        return;
+      }
+      if (typeof this.image.naturalWidth !== "undefined" && this.image.naturalWidth === 0) {
+        return;
+      }
+      return this.ready = true;
+    };
+
+    BadPussyCat.prototype.update = function(ctx, t) {
+      var i, len, node, ref;
+      if (!this.ready) {
+        this.checkImage();
+      }
+      this.x -= this.speed * t;
+      if (!this.ready) {
+        this.checkImage();
+      }
+      if (this.ready) {
+        ctx.drawImage(this.image, 0, 0);
+      }
+      ref = this.parent.children;
+      for (i = 0, len = ref.length; i < len; i++) {
+        node = ref[i];
+        if (node instanceof Bullet && physics.collide(node, this)) {
+          this.remove();
+          node.remove();
+          return;
+        }
+        if (node instanceof Avatar && physics.collide(node, this)) {
+          this.remove();
+          node.remove();
+          return;
+        }
+      }
+      if (this.x < -this.width) {
+        return this.remove();
+      }
+    };
+
+    return BadPussyCat;
+
+  })(Element);
+  SCENE = new Node();
   AVATAR = new Avatar();
-  SCENE.addElement(AVATAR);
+  SCENE.addNode(AVATAR);
+  SCENE.addNode(new Spawn());
   update();
   return {
     width: width,
@@ -256,3 +269,5 @@ define(['input'], function(input) {
     context: context
   };
 });
+
+//# sourceMappingURL=kitty.js.map

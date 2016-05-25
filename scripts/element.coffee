@@ -2,11 +2,12 @@
 
 define [], () ->
 
-    class Element
+    # a node on the scenegraph, nothing more
+    class Node
         @auto_id = 0
 
-        constructor: (@x=0, @y=0, @width=0, @height=0) ->
-            @_id = ++Element.auto_id
+        constructor: () ->
+            @id = ++Node.auto_id
 
             @parent = undefined
             @children = []
@@ -16,35 +17,63 @@ define [], () ->
 
         remove: () ->
             if @parent
-                @parent.removeElement @
+                @parent.removeNode @
 
-        addElement: (element) ->
-            @_add.push element
+        addNode: (node) ->
+            @_add.push node
 
-        removeElement: (element) ->
-            @_remove.push element
+        removeNode: (node) ->
+            @_remove.push node
 
-        _update: (t) ->
-            # add and remove elements
-            for element in @_add
-                console.log "ADD", element._id, element.constructor.name
-                element.parent = @
-                @elements.push element
-            for element in @_remove
-                console.log "REMOVE", element._id, element.constructor.name
-                element.parent = undefined
-                @elements.remove element
+        _update: (ctx, t) ->
+            # add and remove nodes
+            for node in @_add
+                console.log "ADD", node.id, node.constructor.name
+                node.parent = @
+                @children.push node
+            for node in @_remove
+                console.log "REMOVE", node.id, node.constructor.name
+                node.parent = undefined
+                @children.remove node
             @_add = []
             @_remove = []
 
-            # update all elements
-            for element in @elements
-                element._update(t)
+            # update all nodes
+            for node in @children
+                node._update ctx, t
 
             # update self
-            element.update(t)
+            @update ctx, t
 
-        update: (t) -> console.warn "Not implemented" # interface
+        update: (ctx, t) -> return
 
+    # a physical element on the scene, with a position and a volume
+    class Element extends Node
+
+        constructor: (@x=0, @y=0, @width=0, @height=0) ->
+            super()
+            
+        _update: (ctx, t) ->
+            ctx.save()
+            ctx.translate @x, @y
+
+            super ctx, t
+
+            ctx.restore()
+
+        rect: () ->
+            return {
+                x: @x
+                y: @y
+                width: @width
+                height: @height
+
+                top: @y
+                bottom: @y + @height
+                left: @x
+                right: @x + @width
+            }
+
+    Node: Node
     Element: Element
 

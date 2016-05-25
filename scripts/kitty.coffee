@@ -1,6 +1,10 @@
 'use strict'
 
-define ['input'], (input) ->
+define ['input', 'element', 'physics', 'random'], (input, element, physics, random) ->
+
+    Node = element.Node
+    Element = element.Element
+
 
     console.log "da kitty has started"
 
@@ -17,6 +21,7 @@ define ['input'], (input) ->
     # init shizzle
     canvas = document.createElement 'canvas'
     context = canvas.getContext '2d'
+    CONTEXT = canvas.getContext '2d'
 
     width = () -> return window.innerWidth
     height = () -> return window.innerHeight
@@ -50,68 +55,21 @@ define ['input'], (input) ->
 
             context.clearRect 0, 0, canvas.width, canvas.height
 
-            SCENE.update difference/1000.0
+            SCENE._update  CONTEXT, difference/1000.0
 
             now = _now
 
         window.requestAnimationFrame update
 
 
-
-    class Scene
-
-        constructor: () ->
-            @elements = []
-            @_add = []
-            @_remove = []
-
-        update: (t) ->
-            for element in @_add
-                console.log "ADD", element._id, element.constructor.name
-                element._scene = @
-                @elements.push element
-            for element in @_remove
-                console.log "REMOVE", element._id, element.constructor.name
-                element._scene = undefined
-                @elements.remove element
-            @_add = []
-            @_remove = []
-
-            for element in @elements
-                element.update(t)
-
-        addElement: (element) ->
-            @_add.push element
-
-        removeElement: (element) ->
-            @_remove.push element
-
-    class Element
-        @auto_id = 0
-
-        constructor: (x=undefined, y=undefined, width=undefined, height=undefined) ->
-            @_id = ++Element.auto_id
-            @_scene = undefined
-
-        delete: () ->
-            @_scene.removeElement @
-
-        update: (t) -> console.warn "Not implemented" # interface
-
-
     class Avatar extends Element
         @width = 100
         @height = 100
         @speed = 500
-        @reload = 100
+        @reload = 500
 
         constructor: () ->
             super(100, 100, Avatar.width, Avatar.height)
-
-            @x = 100
-            @y = 100
-            @width = Avatar.width
-            @height = Avatar.height
 
             @ready = false
             @image = new Image()
@@ -127,7 +85,7 @@ define ['input'], (input) ->
 
             @last_shot = 0
 
-        update: (t) ->
+        update: (ctx, t) ->
 
             x = @x
             y = @y
@@ -148,7 +106,21 @@ define ['input'], (input) ->
                 @checkImage()
 
             if @ready
-                context.drawImage @image, @x, @y
+                ctx.drawImage @image, 0, 0
+
+
+            # loading indicator
+            reloading = time() - @last_shot
+
+            if reloading <= 0
+                reloading = 0
+            else if reloading >= @reload
+                reloading = 1
+            else
+                reloading /= @reload
+
+            ctx.fillStyle = "#75331F"
+            ctx.fillRect 0, @height-10, @width*(1-reloading), 10
 
         checkImage: () ->
             # During the onload event, IE correctly identifies any images that
@@ -169,7 +141,7 @@ define ['input'], (input) ->
 
         shoot: () ->
             @last_shot = time()
-            @_scene.addElement new Bullet @x + @width, @y + @height/2
+            @parent.addNode new Bullet @x + @width, @y + @height/2
 
     class Bullet extends Element
         @width = 20
@@ -177,11 +149,7 @@ define ['input'], (input) ->
         @speed = 1000
 
         constructor: (x, y) ->
-
-            @x = x
-            @y = y
-            @width = Bullet.width
-            @height = Bullet.height
+            super(x, y, Bullet.width, Bullet.height)
 
             @ready = false
             @image = new Image()
@@ -210,7 +178,7 @@ define ['input'], (input) ->
             # No other way of checking: assume it’s ok.
             @ready = true
 
-        update: (t) ->
+        update: (ctx, t) ->
 
             if not @ready
                 @checkImage()
@@ -221,12 +189,95 @@ define ['input'], (input) ->
                 @checkImage()
 
             if @ready
-                context.drawImage @image, @x, @y
+                ctx.drawImage @image, 0, 0
+
+    class Spawn extends Node
+
+        constructor: () ->
+            super()
+            @next = time() + random.int(2000, 1000)
+
+        update: () ->
+            if @next < time()
+
+                @parent.addNode new BadPussyCat width(), random.int(50, height()-50  )
+
+                @next = time() + random.int(2000, 1000)
 
 
-    SCENE = new Scene()
+    class BadPussyCat extends Element
+        @width = 50
+        @height = 50
+        @speed = 300
+
+        constructor: (x, y) ->
+            super(x, y, BadPussyCat.width, BadPussyCat.height)
+
+            @ready = false
+            @image = new Image()
+
+            @image.onload = () ->
+                console.log "IMAGE LOADED BADPUSSYCAT"
+
+            @image.src = "http://placekitten.com/g/"+@width+"/"+@height
+
+            @speed = BadPussyCat.speed
+
+        checkImage: () ->
+            # During the onload event, IE correctly identifies any images that
+            # weren’t downloaded as not complete. Others should too. Gecko-based
+            # browsers act like NS4 in that they report this incorrectly.
+            if not @image.complete
+                return
+
+            # However, they do have two very useful properties: naturalWidth and
+            # naturalHeight. These give the true size of the image. If it failed
+            # to load, either of these should be zero.
+
+            if typeof @image.naturalWidth != "undefined" && @image.naturalWidth == 0
+                return
+
+            # No other way of checking: assume it’s ok.
+            @ready = true
+
+        update: (ctx, t) ->
+
+            if not @ready
+                @checkImage()
+
+            @x -= @speed * t
+
+            if not @ready
+                @checkImage()
+
+            if @ready
+                ctx.drawImage @image, 0, 0
+
+
+
+            for node in @parent.children
+                if node instanceof Bullet and physics.collide node, @
+#                    if chance 20
+#                        @_scene.addElement new PowerUp @x, @y
+
+                    @remove()
+                    node.remove()
+                    return
+
+                if node instanceof Avatar and physics.collide node, @
+                    @remove()
+                    node.remove()
+                    return
+
+            # remove if off screen
+            if @x < -@width
+                @remove()
+
+
+    SCENE = new Node()
     AVATAR = new Avatar()
-    SCENE.addElement AVATAR
+    SCENE.addNode AVATAR
+    SCENE.addNode new Spawn()
 
     update()
 
