@@ -132,7 +132,7 @@ define ['input', 'element', 'physics', 'random'], (input, element, physics, rand
             # However, they do have two very useful properties: naturalWidth and
             # naturalHeight. These give the true size of the image. If it failed
             # to load, either of these should be zero.
-        
+
             if typeof @image.naturalWidth != "undefined" && @image.naturalWidth == 0
                 return
 
@@ -257,6 +257,7 @@ define ['input', 'element', 'physics', 'random'], (input, element, physics, rand
 
             for node in @parent.children
                 if node instanceof Bullet and physics.collide node, @
+                    UI.score++
 #                    if chance 20
 #                        @_scene.addElement new PowerUp @x, @y
 
@@ -272,12 +273,28 @@ define ['input', 'element', 'physics', 'random'], (input, element, physics, rand
             # remove if off screen
             if @x < -@width
                 @remove()
+                UI.escaped++
+
+    class UI extends Node
+
+        constructor: () ->
+            super()
+            @score = 0
+            @escaped = 0
+
+        update: (ctx, t) ->
+
+            ctx.font = "48px serif";
+            ctx.fillText "Bad Kitties killed: " + @score, 50, 50
+            ctx.fillText "Bad Kitties escaped: " + @escaped, 50, 100
 
 
     SCENE = new Node()
     AVATAR = new Avatar()
+    UI = new UI()
     SCENE.addNode AVATAR
     SCENE.addNode new Spawn()
+    SCENE.addNode UI
 
     update()
 

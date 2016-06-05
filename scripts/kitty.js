@@ -4,7 +4,7 @@ var extend = function(child, parent) { for (var key in parent) { if (hasProp.cal
   hasProp = {}.hasOwnProperty;
 
 define(['input', 'element', 'physics', 'random'], function(input, element, physics, random) {
-  var AVATAR, Avatar, BadPussyCat, Bullet, CONTEXT, Element, Node, SCENE, Spawn, canvas, context, height, now, resize, time, update, width;
+  var AVATAR, Avatar, BadPussyCat, Bullet, CONTEXT, Element, Node, SCENE, Spawn, UI, canvas, context, height, now, resize, time, update, width;
   Node = element.Node;
   Element = element.Element;
   console.log("da kitty has started");
@@ -239,6 +239,7 @@ define(['input', 'element', 'physics', 'random'], function(input, element, physi
       for (i = 0, len = ref.length; i < len; i++) {
         node = ref[i];
         if (node instanceof Bullet && physics.collide(node, this)) {
+          UI.score++;
           this.remove();
           node.remove();
           return;
@@ -250,17 +251,38 @@ define(['input', 'element', 'physics', 'random'], function(input, element, physi
         }
       }
       if (this.x < -this.width) {
-        return this.remove();
+        this.remove();
+        return UI.escaped++;
       }
     };
 
     return BadPussyCat;
 
   })(Element);
+  UI = (function(superClass) {
+    extend(UI, superClass);
+
+    function UI() {
+      UI.__super__.constructor.call(this);
+      this.score = 0;
+      this.escaped = 0;
+    }
+
+    UI.prototype.update = function(ctx, t) {
+      ctx.font = "48px serif";
+      ctx.fillText("Bad Kitties killed: " + this.score, 50, 50);
+      return ctx.fillText("Bad Kitties escaped: " + this.escaped, 50, 100);
+    };
+
+    return UI;
+
+  })(Node);
   SCENE = new Node();
   AVATAR = new Avatar();
+  UI = new UI();
   SCENE.addNode(AVATAR);
   SCENE.addNode(new Spawn());
+  SCENE.addNode(UI);
   update();
   return {
     width: width,
