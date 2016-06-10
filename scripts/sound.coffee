@@ -2,6 +2,7 @@
 
 define ["wad"], (Wad) ->
 
+    opening: new Wad({source : 'sounds/Opening.wav', volume: 1})
     explosion: new Wad({source : 'sounds/Explosion.wav', volume: 1})
     heavyHit: new Wad({source : 'sounds/HeavyHit.wav', volume: 0.5})
     heavyLaser: new Wad({source : 'sounds/HeavyLaser.wav'})

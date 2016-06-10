@@ -8,6 +8,8 @@ define ['input', 'element', 'physics', 'random', 'sound'], (input, element, phys
 
     console.log "da kitty has started"
 
+    sound.opening.play()
+
 
     # fix array, because it sux
     Array.prototype.remove = (element) ->
@@ -264,6 +266,8 @@ define ['input', 'element', 'physics', 'random', 'sound'], (input, element, phys
 
                     sound.heavyHit.play()
 
+                    @parent.addNode new Explosion @x+@width/2, @y+@height/2
+
                     @remove()
                     node.remove()
                     return
@@ -271,6 +275,9 @@ define ['input', 'element', 'physics', 'random', 'sound'], (input, element, phys
                 if node instanceof Avatar and physics.collide node, @
 
                     sound.explosion.play()
+
+                    @parent.addNode new Explosion @x+@width/2, @y+@height/2
+                    @parent.addNode new BigExplosion node.x+node.width/2, node.y+node.height/2,input.state.UP, input.state.DOWN, input.state.LEFT, input.state.RIGHT
 
                     @remove()
                     node.remove()
@@ -295,12 +302,90 @@ define ['input', 'element', 'physics', 'random', 'sound'], (input, element, phys
             ctx.fillText "Bad Kitties escaped: " + @escaped, 50, 100
 
 
+    class Explosion extends Element
+        @speed = 300
+
+        constructor: (x, y) ->
+            super(x, y)
+
+            removeAfter @
+
+        removeAfter = (el) ->
+
+            setTimeout () ->
+                console.warn "REMOVE PARTICLES"
+                el.remove()
+            , 300
+
+        update: (ctx, t) ->
+
+            @x -= Explosion.speed * t
+            @y += Explosion.speed * t / 4
+
+            size = 25
+            range = 30
+
+            for i in [0...random.int(20, 10)]
+                ctx.fillStyle = "hsl("+random.int(33)+", 100%, 50%)"
+                sized = random.int(size, 5)
+
+                point = random.inCircle range
+
+                ctx.fillRect point.x, point.y, sized, sized
+
+
+    class BigExplosion extends Element
+        @speed = 500
+
+        constructor: (x, y, @up, @down, @left, @right) ->
+            super(x, y)
+
+            removeAfter @
+
+        removeAfter = (el) ->
+
+            setTimeout () ->
+                console.warn "REMOVE PARTICLES"
+                el.remove()
+            , 300
+
+        update: (ctx, t) ->
+
+            if @up and not @down
+                @y -= BigExplosion.speed * t
+            else if @down and not @up
+                @y += BigExplosion.speed * t
+
+            if @left and not @right
+                @x -= BigExplosion.speed * t
+            else if @right and not @left
+                @x += BigExplosion.speed * t
+
+            size = 50
+            range = 100
+
+            for i in [0...random.int(100, 20)]
+                ctx.fillStyle = "hsl("+random.int(45)+", 100%, 50%)"
+                sized = random.int(size, 5)
+
+                # Pick two random numbers in the range (0, 1)
+                # namely a and b. If b < a, swap them.
+                # Your point is (b*R*cos(2*pi*a/b), b*R*sin(2*pi*a/b)).
+
+                point = random.inCircle range
+
+                ctx.fillRect point.x, point.y, sized, sized
+
+
+
+
     SCENE = new Node()
     AVATAR = new Avatar()
     UI = new UI()
     SCENE.addNode AVATAR
     SCENE.addNode new Spawn()
     SCENE.addNode UI
+#    SCENE.addNode new Explosion 800, 100
 
     update()
 

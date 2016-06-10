@@ -4,10 +4,11 @@ var extend = function(child, parent) { for (var key in parent) { if (hasProp.cal
   hasProp = {}.hasOwnProperty;
 
 define(['input', 'element', 'physics', 'random', 'sound'], function(input, element, physics, random, sound) {
-  var AVATAR, Avatar, BadPussyCat, Bullet, CONTEXT, Element, Node, SCENE, Spawn, UI, canvas, context, height, now, resize, time, update, width;
+  var AVATAR, Avatar, BadPussyCat, BigExplosion, Bullet, CONTEXT, Element, Explosion, Node, SCENE, Spawn, UI, canvas, context, height, now, resize, time, update, width;
   Node = element.Node;
   Element = element.Element;
   console.log("da kitty has started");
+  sound.opening.play();
   Array.prototype.remove = function(element) {
     var index;
     index = this.indexOf(element);
@@ -225,7 +226,7 @@ define(['input', 'element', 'physics', 'random', 'sound'], function(input, eleme
     };
 
     BadPussyCat.prototype.update = function(ctx, t) {
-      var i, len, node, ref;
+      var j, len, node, ref;
       if (!this.ready) {
         this.checkImage();
       }
@@ -237,17 +238,20 @@ define(['input', 'element', 'physics', 'random', 'sound'], function(input, eleme
         ctx.drawImage(this.image, 0, 0);
       }
       ref = this.parent.children;
-      for (i = 0, len = ref.length; i < len; i++) {
-        node = ref[i];
+      for (j = 0, len = ref.length; j < len; j++) {
+        node = ref[j];
         if (node instanceof Bullet && physics.collide(node, this)) {
           UI.score++;
           sound.heavyHit.play();
+          this.parent.addNode(new Explosion(this.x + this.width / 2, this.y + this.height / 2));
           this.remove();
           node.remove();
           return;
         }
         if (node instanceof Avatar && physics.collide(node, this)) {
           sound.explosion.play();
+          this.parent.addNode(new Explosion(this.x + this.width / 2, this.y + this.height / 2));
+          this.parent.addNode(new BigExplosion(node.x + node.width / 2, node.y + node.height / 2, input.state.UP, input.state.DOWN, input.state.LEFT, input.state.RIGHT));
           this.remove();
           node.remove();
           return;
@@ -280,6 +284,94 @@ define(['input', 'element', 'physics', 'random', 'sound'], function(input, eleme
     return UI;
 
   })(Node);
+  Explosion = (function(superClass) {
+    var removeAfter;
+
+    extend(Explosion, superClass);
+
+    Explosion.speed = 300;
+
+    function Explosion(x, y) {
+      Explosion.__super__.constructor.call(this, x, y);
+      removeAfter(this);
+    }
+
+    removeAfter = function(el) {
+      return setTimeout(function() {
+        console.warn("REMOVE PARTICLES");
+        return el.remove();
+      }, 300);
+    };
+
+    Explosion.prototype.update = function(ctx, t) {
+      var i, j, point, range, ref, results, size, sized;
+      this.x -= Explosion.speed * t;
+      this.y += Explosion.speed * t / 4;
+      size = 25;
+      range = 30;
+      results = [];
+      for (i = j = 0, ref = random.int(20, 10); 0 <= ref ? j < ref : j > ref; i = 0 <= ref ? ++j : --j) {
+        ctx.fillStyle = "hsl(" + random.int(33) + ", 100%, 50%)";
+        sized = random.int(size, 5);
+        point = random.inCircle(range);
+        results.push(ctx.fillRect(point.x, point.y, sized, sized));
+      }
+      return results;
+    };
+
+    return Explosion;
+
+  })(Element);
+  BigExplosion = (function(superClass) {
+    var removeAfter;
+
+    extend(BigExplosion, superClass);
+
+    BigExplosion.speed = 500;
+
+    function BigExplosion(x, y, up, down, left, right) {
+      this.up = up;
+      this.down = down;
+      this.left = left;
+      this.right = right;
+      BigExplosion.__super__.constructor.call(this, x, y);
+      removeAfter(this);
+    }
+
+    removeAfter = function(el) {
+      return setTimeout(function() {
+        console.warn("REMOVE PARTICLES");
+        return el.remove();
+      }, 300);
+    };
+
+    BigExplosion.prototype.update = function(ctx, t) {
+      var i, j, point, range, ref, results, size, sized;
+      if (this.up && !this.down) {
+        this.y -= BigExplosion.speed * t;
+      } else if (this.down && !this.up) {
+        this.y += BigExplosion.speed * t;
+      }
+      if (this.left && !this.right) {
+        this.x -= BigExplosion.speed * t;
+      } else if (this.right && !this.left) {
+        this.x += BigExplosion.speed * t;
+      }
+      size = 50;
+      range = 100;
+      results = [];
+      for (i = j = 0, ref = random.int(100, 20); 0 <= ref ? j < ref : j > ref; i = 0 <= ref ? ++j : --j) {
+        ctx.fillStyle = "hsl(" + random.int(45) + ", 100%, 50%)";
+        sized = random.int(size, 5);
+        point = random.inCircle(range);
+        results.push(ctx.fillRect(point.x, point.y, sized, sized));
+      }
+      return results;
+    };
+
+    return BigExplosion;
+
+  })(Element);
   SCENE = new Node();
   AVATAR = new Avatar();
   UI = new UI();

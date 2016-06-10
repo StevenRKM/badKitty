@@ -2,6 +2,10 @@
 'use strict';
 define(["wad"], function(Wad) {
   return {
+    opening: new Wad({
+      source: 'sounds/Opening.wav',
+      volume: 1
+    }),
     explosion: new Wad({
       source: 'sounds/Explosion.wav',
       volume: 1
