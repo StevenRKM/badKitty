@@ -3,17 +3,23 @@
 require.config({
   paths: {
     'kitty': 'kitty',
-    'input': 'input'
+    'input': 'input',
+    'wad': 'lib/wad.min'
   },
   shim: {
+    'wad': {
+      exports: 'wad'
+    },
     'input': {
       exports: 'input'
     },
     'kitty': {
-      deps: ['input'],
+      deps: ['input', 'wad'],
       exports: 'kitty'
     }
   }
 });
 
 require(['kitty'], function() {});
+
+//# sourceMappingURL=main.js.map

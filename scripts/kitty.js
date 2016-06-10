@@ -3,7 +3,7 @@
 var extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
 
-define(['input', 'element', 'physics', 'random'], function(input, element, physics, random) {
+define(['input', 'element', 'physics', 'random', 'sound'], function(input, element, physics, random, sound) {
   var AVATAR, Avatar, BadPussyCat, Bullet, CONTEXT, Element, Node, SCENE, Spawn, UI, canvas, context, height, now, resize, time, update, width;
   Node = element.Node;
   Element = element.Element;
@@ -140,6 +140,7 @@ define(['input', 'element', 'physics', 'random'], function(input, element, physi
 
     function Bullet(x, y) {
       Bullet.__super__.constructor.call(this, x, y, Bullet.width, Bullet.height);
+      sound.laser.play();
       this.ready = false;
       this.image = new Image();
       this.image.onload = function() {
@@ -240,11 +241,13 @@ define(['input', 'element', 'physics', 'random'], function(input, element, physi
         node = ref[i];
         if (node instanceof Bullet && physics.collide(node, this)) {
           UI.score++;
+          sound.heavyHit.play();
           this.remove();
           node.remove();
           return;
         }
         if (node instanceof Avatar && physics.collide(node, this)) {
+          sound.explosion.play();
           this.remove();
           node.remove();
           return;

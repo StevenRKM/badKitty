@@ -1,13 +1,12 @@
 'use strict'
 
-define ['input', 'element', 'physics', 'random'], (input, element, physics, random) ->
+define ['input', 'element', 'physics', 'random', 'sound'], (input, element, physics, random, sound) ->
+
 
     Node = element.Node
     Element = element.Element
 
-
     console.log "da kitty has started"
-
 
 
     # fix array, because it sux
@@ -151,6 +150,8 @@ define ['input', 'element', 'physics', 'random'], (input, element, physics, rand
         constructor: (x, y) ->
             super(x, y, Bullet.width, Bullet.height)
 
+            sound.laser.play()
+
             @ready = false
             @image = new Image()
 
@@ -261,11 +262,16 @@ define ['input', 'element', 'physics', 'random'], (input, element, physics, rand
 #                    if chance 20
 #                        @_scene.addElement new PowerUp @x, @y
 
+                    sound.heavyHit.play()
+
                     @remove()
                     node.remove()
                     return
 
                 if node instanceof Avatar and physics.collide node, @
+
+                    sound.explosion.play()
+
                     @remove()
                     node.remove()
                     return
