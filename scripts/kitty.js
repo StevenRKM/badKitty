@@ -188,7 +188,7 @@ define(['input', 'element', 'physics', 'random', 'sound'], function(input, eleme
     Spawn.prototype.update = function() {
       if (this.next < time()) {
         this.parent.addNode(new BadPussyCat(width(), random.int(50, height() - 50)));
-        return this.next = time() + random.int(2000, 1000);
+        return this.next = time() + random.int(1000, 500);
       }
     };
 
@@ -212,7 +212,8 @@ define(['input', 'element', 'physics', 'random', 'sound'], function(input, eleme
         return console.log("IMAGE LOADED BADPUSSYCAT");
       };
       this.image.src = "http://placekitten.com/g/" + this.width + "/" + this.height;
-      this.speed = BadPussyCat.speed;
+      this.speed = BadPussyCat.speed + random.int(300);
+      console.warn(this.speed);
     }
 
     BadPussyCat.prototype.checkImage = function() {

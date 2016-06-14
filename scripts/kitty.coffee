@@ -205,7 +205,7 @@ define ['input', 'element', 'physics', 'random', 'sound'], (input, element, phys
 
                 @parent.addNode new BadPussyCat width(), random.int(50, height()-50  )
 
-                @next = time() + random.int(2000, 1000)
+                @next = time() + random.int(1000, 500)
 
 
     class BadPussyCat extends Element
@@ -224,7 +224,8 @@ define ['input', 'element', 'physics', 'random', 'sound'], (input, element, phys
 
             @image.src = "http://placekitten.com/g/"+@width+"/"+@height
 
-            @speed = BadPussyCat.speed
+            @speed = BadPussyCat.speed + random.int(300)
+            console.warn @speed
 
         checkImage: () ->
             # During the onload event, IE correctly identifies any images that
