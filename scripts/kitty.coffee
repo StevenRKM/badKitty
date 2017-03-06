@@ -43,7 +43,7 @@ define ['input', 'element', 'physics', 'random', 'sound'], (input, element, phys
     window.addEventListener('resize', resize, false);
 
 
-    # upodate loop
+    # update loop
     update = () ->
 
         # loop through all update calls
@@ -56,7 +56,7 @@ define ['input', 'element', 'physics', 'random', 'sound'], (input, element, phys
 
             context.clearRect 0, 0, canvas.width, canvas.height
 
-            SCENE._update  CONTEXT, difference/1000.0
+            SCENE._update  CONTEXT, difference/1000.0, _now
 
             now = _now
 
@@ -380,13 +380,180 @@ define ['input', 'element', 'physics', 'random', 'sound'], (input, element, phys
 
 
 
+    class UILayer extends Element
+
+        constructor: (min, max, value) ->
+            super()
+
+            @nextHeight = 0
+
+            @elements = {}
+
+        addUIElemenet: (element) ->
+
+            # auto height
+            element.y = @nextHeight
+            @nextHeight += element.height
+
+            @elements[element.name] = element
+            @addNode element
+
+        getValue: (name) ->
+            return @elements[name].value
+
+        mouseDown: (event) ->
+            for node in @children
+                node.mouseDown event
+
+        update: (ctx, t) ->
+
+    class UIElement extends Element
+
+        constructor: (@name, @value = 0) ->
+            super()
+
+        mouseDown: (event) -> return # overwrite me
+
+    class UISlider extends UIElement
+
+        constructor: (@name, @min, @max, @value) ->
+            super(@name, @value)
+
+            @height = 50
+            @width = 350
+
+        update: (ctx, t) ->
+
+#            ctx.strokeRect 0, 0, @width, @height
+
+            # background
+            ctx.fillStyle = "hsl(200, 10%, 20%)"
+            ctx.fillRect 0, 0, @width, @height
+
+            # value bar
+
+            relX = @value - @min
+            valueWidth = if relX then relX/(@max-@min)*@width else 0
+
+            ctx.fillStyle = "hsl(200, 100%, 30%)"
+            ctx.fillRect 0, 0, valueWidth, @height
+
+            # text
+            ctx.fillStyle = "hsl(200, 100%, 80%)"
+            ctx.font = "24px serif";
+            ctx.fillText @min, 0, @height/2-5
+            ctx.fillText @max, 0, @height-5
+            ctx.fillText @name, @width-150, @height/2-5
+            ctx.font = "60px serif";
+            ctx.fillText Math.round(@value), 60, @height-5
+
+        mouseDown: (event) ->
+            if physics.pointInsideRect( {x: event.offsetX, y: event.offsetY}, @)
+                relX = (event.offsetX - @x)/@width
+                @value = ((@max-@min)*relX)+@min
+
+    class FireSystem extends Element
+
+        constructor: (x, y, @source) ->
+            super(x, y)
+
+            @max = 1000
+            @particles = []
+            @creationSpeed = 1
+
+            for i in [0...@max]
+                @particles.push {
+                    alive: false
+                    start: 0
+                    end: 0
+                    x: 0
+                    y: 0
+                    speed: 0
+                    h: 0 # Hue is a degree on the color wheel (from 0 to 360) - 0 (or 360) is red, 120 is green, 240 is blue
+                    s: 0 # Saturation is a percentage value; 0% means a shade of gray and 100% is the full color.
+                    l: 0 # Lightness is also a percentage; 0% is black, 100% is white.
+                    a: 0 # The alpha parameter is a number between 0.0 (fully transparent) and 1.0 (fully opaque).
+                }
+
+        update: (ctx, t, now) ->
+
+            total = 0
+
+            # settings
+            particleSize = UI.getValue "particleSize"
+            speedBase = UI.getValue "speedBase"
+            speedRandom = UI.getValue "speedRandom"
+            endBase = UI.getValue "endBase"
+            endRandom = UI.getValue "endRandom"
+            hue = UI.getValue "hue"
+            hueSpread = UI.getValue "hueSpread"
+            creationChance = UI.getValue "creationChance"
+            spreadY = UI.getValue "spreadY"
+
+            for p in @particles
+
+                # update
+                if p.alive
+                    total++
+
+                    # draw
+                    ctx.fillStyle = "hsla("+p.h+", "+(p.s*100)+"%, "+(p.l*100)+"%, "+p.a+")"
+                    ctx.fillRect p.x, p.y, particleSize, particleSize
+
+                    # update movement
+                    p.x -= p.speed * t
+
+                    # die
+                    if p.end < now
+                        p.alive = false
+
+                # create
+                else
+                    if random.chance creationChance
+
+                        point = random.inCircle( (@source.height - particleSize)/2)
+
+                        p.alive = true
+                        p.start = now
+                        p.end = now + endBase + random.rand()*endRandom
+                        p.x = @source.x
+                        p.y = @source.y + @source.height/2 + point.y
+                        p.speed = speedBase + random.int speedRandom
+                        p.h = (hue + random.int hueSpread) % 360
+                        p.s = 1
+                        p.l = 0.8
+                        p.a = 0.5
+
+
+            ctx.fillStyle = "hsla(0, 100%, 80%, 0.5)"
+            ctx.font = "48px serif";
+            ctx.fillText "Particles: " + total, 50, 50
+
+
     SCENE = new Node()
     AVATAR = new Avatar()
     UI = new UI()
+    SCENE.addNode UI
+    UI = new UILayer()
+    SCENE.addNode UI
+#    SCENE.addNode new FireSystem(800, 200)
+    SCENE.addNode new FireSystem(0, 0, AVATAR)
     SCENE.addNode AVATAR
     SCENE.addNode new Spawn()
-    SCENE.addNode UI
-#    SCENE.addNode new Explosion 800, 100
+    #    SCENE.addNode new Explosion 800, 500
+
+
+    UI.addUIElemenet new UISlider "particleSize", 1, 100, 15
+    UI.addUIElemenet new UISlider "speedBase", 0, 100, 100
+    UI.addUIElemenet new UISlider "speedRandom", 0, 200, 200
+    UI.addUIElemenet new UISlider "endBase", 0, 5000, 1000
+    UI.addUIElemenet new UISlider "endRandom", 0, 5000, 500
+    UI.addUIElemenet new UISlider "hue", 0, 360, 0
+    UI.addUIElemenet new UISlider "hueSpread", 0, 360, 46
+    UI.addUIElemenet new UISlider "creationChance", 0, 100, 5
+    UI.addUIElemenet new UISlider "spreadY", 0, 750, 30
+
+    canvas.addEventListener 'mousedown', ( (event) -> UI.mouseDown(event) ), false
 
     update()
 

@@ -21,5 +21,3 @@ require.config({
 });
 
 require(['kitty'], function() {});
-
-//# sourceMappingURL=main.js.map

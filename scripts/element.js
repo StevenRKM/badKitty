@@ -30,7 +30,7 @@ define([], function() {
       return this._remove.push(node);
     };
 
-    Node.prototype._update = function(ctx, t) {
+    Node.prototype._update = function(ctx, t, now) {
       var i, j, k, len, len1, len2, node, ref, ref1, ref2;
       ref = this._add;
       for (i = 0, len = ref.length; i < len; i++) {
@@ -51,9 +51,9 @@ define([], function() {
       ref2 = this.children;
       for (k = 0, len2 = ref2.length; k < len2; k++) {
         node = ref2[k];
-        node._update(ctx, t);
+        node._update(ctx, t, now);
       }
-      return this.update(ctx, t);
+      return this.update(ctx, t, now);
     };
 
     Node.prototype.update = function(ctx, t) {};
@@ -72,10 +72,10 @@ define([], function() {
       Element.__super__.constructor.call(this);
     }
 
-    Element.prototype._update = function(ctx, t) {
+    Element.prototype._update = function(ctx, t, now) {
       ctx.save();
       ctx.translate(this.x, this.y);
-      Element.__super__._update.call(this, ctx, t);
+      Element.__super__._update.call(this, ctx, t, now);
       return ctx.restore();
     };
 
@@ -100,5 +100,3 @@ define([], function() {
     Element: Element
   };
 });
-
-//# sourceMappingURL=element.js.map

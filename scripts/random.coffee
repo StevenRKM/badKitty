@@ -1,7 +1,7 @@
 'use strict'
 
 define [], () ->
-    
+
     int = (max=1, min=0) ->
         return Math.floor(min + Math.random()*(max+1 - min))
 
@@ -28,9 +28,18 @@ define [], () ->
             y: b * radius * Math.sin(ratio)
         }
 
+    inHalfCircle = (radius) ->
+
+        point = inCircle radius
+
+        point.y = Math.abs(point.y) / 2
+
+        return point
+
 
     int: int
     chance: chance
     pick: pick
     rand: Math.random
+
     inCircle: inCircle

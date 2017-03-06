@@ -26,5 +26,15 @@ define [], () ->
             ((rect2.left <= rect1.right) && (rect1.right <= rect2.right))
         )
 
+    # is point inside element rect
+    pointInsideRect = (point, el) ->
+        rect = el.rect()
+
+        return (
+            ((rect.top <= point.y) && (point.y <= rect.bottom)) &&
+            ((rect.left <= point.x) && (point.x <= rect.right))
+        )
+
     collide: collide
     inside: inside
+    pointInsideRect: pointInsideRect

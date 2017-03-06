@@ -4,7 +4,7 @@ var extend = function(child, parent) { for (var key in parent) { if (hasProp.cal
   hasProp = {}.hasOwnProperty;
 
 define(['input', 'element', 'physics', 'random', 'sound'], function(input, element, physics, random, sound) {
-  var AVATAR, Avatar, BadPussyCat, BigExplosion, Bullet, CONTEXT, Element, Explosion, Node, SCENE, Spawn, UI, canvas, context, height, now, resize, time, update, width;
+  var AVATAR, Avatar, BadPussyCat, BigExplosion, Bullet, CONTEXT, Element, Explosion, FireSystem, Node, SCENE, Spawn, UI, UIElement, UILayer, UISlider, canvas, context, height, now, resize, time, update, width;
   Node = element.Node;
   Element = element.Element;
   console.log("da kitty has started");
@@ -43,7 +43,7 @@ define(['input', 'element', 'physics', 'random', 'sound'], function(input, eleme
     difference = _now - now;
     if (difference) {
       context.clearRect(0, 0, canvas.width, canvas.height);
-      SCENE._update(CONTEXT, difference / 1000.0);
+      SCENE._update(CONTEXT, difference / 1000.0, _now);
       now = _now;
     }
     return window.requestAnimationFrame(update);
@@ -373,12 +373,194 @@ define(['input', 'element', 'physics', 'random', 'sound'], function(input, eleme
     return BigExplosion;
 
   })(Element);
+  UILayer = (function(superClass) {
+    extend(UILayer, superClass);
+
+    function UILayer(min, max, value) {
+      UILayer.__super__.constructor.call(this);
+      this.nextHeight = 0;
+      this.elements = {};
+    }
+
+    UILayer.prototype.addUIElemenet = function(element) {
+      element.y = this.nextHeight;
+      this.nextHeight += element.height;
+      this.elements[element.name] = element;
+      return this.addNode(element);
+    };
+
+    UILayer.prototype.getValue = function(name) {
+      return this.elements[name].value;
+    };
+
+    UILayer.prototype.mouseDown = function(event) {
+      var j, len, node, ref, results;
+      ref = this.children;
+      results = [];
+      for (j = 0, len = ref.length; j < len; j++) {
+        node = ref[j];
+        results.push(node.mouseDown(event));
+      }
+      return results;
+    };
+
+    UILayer.prototype.update = function(ctx, t) {};
+
+    return UILayer;
+
+  })(Element);
+  UIElement = (function(superClass) {
+    extend(UIElement, superClass);
+
+    function UIElement(name1, value1) {
+      this.name = name1;
+      this.value = value1 != null ? value1 : 0;
+      UIElement.__super__.constructor.call(this);
+    }
+
+    UIElement.prototype.mouseDown = function(event) {};
+
+    return UIElement;
+
+  })(Element);
+  UISlider = (function(superClass) {
+    extend(UISlider, superClass);
+
+    function UISlider(name1, min1, max1, value1) {
+      this.name = name1;
+      this.min = min1;
+      this.max = max1;
+      this.value = value1;
+      UISlider.__super__.constructor.call(this, this.name, this.value);
+      this.height = 50;
+      this.width = 350;
+    }
+
+    UISlider.prototype.update = function(ctx, t) {
+      var relX, valueWidth;
+      ctx.fillStyle = "hsl(200, 10%, 20%)";
+      ctx.fillRect(0, 0, this.width, this.height);
+      relX = this.value - this.min;
+      valueWidth = relX ? relX / (this.max - this.min) * this.width : 0;
+      ctx.fillStyle = "hsl(200, 100%, 30%)";
+      ctx.fillRect(0, 0, valueWidth, this.height);
+      ctx.fillStyle = "hsl(200, 100%, 80%)";
+      ctx.font = "24px serif";
+      ctx.fillText(this.min, 0, this.height / 2 - 5);
+      ctx.fillText(this.max, 0, this.height - 5);
+      ctx.fillText(this.name, this.width - 150, this.height / 2 - 5);
+      ctx.font = "60px serif";
+      return ctx.fillText(Math.round(this.value), 60, this.height - 5);
+    };
+
+    UISlider.prototype.mouseDown = function(event) {
+      var relX;
+      if (physics.pointInsideRect({
+        x: event.offsetX,
+        y: event.offsetY
+      }, this)) {
+        relX = (event.offsetX - this.x) / this.width;
+        return this.value = ((this.max - this.min) * relX) + this.min;
+      }
+    };
+
+    return UISlider;
+
+  })(UIElement);
+  FireSystem = (function(superClass) {
+    extend(FireSystem, superClass);
+
+    function FireSystem(x, y, source) {
+      var i, j, ref;
+      this.source = source;
+      FireSystem.__super__.constructor.call(this, x, y);
+      this.max = 1000;
+      this.particles = [];
+      this.creationSpeed = 1;
+      for (i = j = 0, ref = this.max; 0 <= ref ? j < ref : j > ref; i = 0 <= ref ? ++j : --j) {
+        this.particles.push({
+          alive: false,
+          start: 0,
+          end: 0,
+          x: 0,
+          y: 0,
+          speed: 0,
+          h: 0,
+          s: 0,
+          l: 0,
+          a: 0
+        });
+      }
+    }
+
+    FireSystem.prototype.update = function(ctx, t, now) {
+      var creationChance, endBase, endRandom, hue, hueSpread, j, len, p, particleSize, point, ref, speedBase, speedRandom, spreadY, total;
+      total = 0;
+      particleSize = UI.getValue("particleSize");
+      speedBase = UI.getValue("speedBase");
+      speedRandom = UI.getValue("speedRandom");
+      endBase = UI.getValue("endBase");
+      endRandom = UI.getValue("endRandom");
+      hue = UI.getValue("hue");
+      hueSpread = UI.getValue("hueSpread");
+      creationChance = UI.getValue("creationChance");
+      spreadY = UI.getValue("spreadY");
+      ref = this.particles;
+      for (j = 0, len = ref.length; j < len; j++) {
+        p = ref[j];
+        if (p.alive) {
+          total++;
+          ctx.fillStyle = "hsla(" + p.h + ", " + (p.s * 100) + "%, " + (p.l * 100) + "%, " + p.a + ")";
+          ctx.fillRect(p.x, p.y, particleSize, particleSize);
+          p.x -= p.speed * t;
+          if (p.end < now) {
+            p.alive = false;
+          }
+        } else {
+          if (random.chance(creationChance)) {
+            point = random.inCircle((this.source.height - particleSize) / 2);
+            p.alive = true;
+            p.start = now;
+            p.end = now + endBase + random.rand() * endRandom;
+            p.x = this.source.x;
+            p.y = this.source.y + this.source.height / 2 + point.y;
+            p.speed = speedBase + random.int(speedRandom);
+            p.h = (hue + random.int(hueSpread)) % 360;
+            p.s = 1;
+            p.l = 0.8;
+            p.a = 0.5;
+          }
+        }
+      }
+      ctx.fillStyle = "hsla(0, 100%, 80%, 0.5)";
+      ctx.font = "48px serif";
+      return ctx.fillText("Particles: " + total, 50, 50);
+    };
+
+    return FireSystem;
+
+  })(Element);
   SCENE = new Node();
   AVATAR = new Avatar();
   UI = new UI();
+  SCENE.addNode(UI);
+  UI = new UILayer();
+  SCENE.addNode(UI);
+  SCENE.addNode(new FireSystem(0, 0, AVATAR));
   SCENE.addNode(AVATAR);
   SCENE.addNode(new Spawn());
-  SCENE.addNode(UI);
+  UI.addUIElemenet(new UISlider("particleSize", 1, 100, 15));
+  UI.addUIElemenet(new UISlider("speedBase", 0, 100, 100));
+  UI.addUIElemenet(new UISlider("speedRandom", 0, 200, 200));
+  UI.addUIElemenet(new UISlider("endBase", 0, 5000, 1000));
+  UI.addUIElemenet(new UISlider("endRandom", 0, 5000, 500));
+  UI.addUIElemenet(new UISlider("hue", 0, 360, 0));
+  UI.addUIElemenet(new UISlider("hueSpread", 0, 360, 46));
+  UI.addUIElemenet(new UISlider("creationChance", 0, 100, 5));
+  UI.addUIElemenet(new UISlider("spreadY", 0, 750, 30));
+  canvas.addEventListener('mousedown', (function(event) {
+    return UI.mouseDown(event);
+  }), false);
   update();
   return {
     width: width,

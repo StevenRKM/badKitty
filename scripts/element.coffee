@@ -25,7 +25,7 @@ define [], () ->
         removeNode: (node) ->
             @_remove.push node
 
-        _update: (ctx, t) ->
+        _update: (ctx, t, now) ->
             # add and remove nodes
             for node in @_add
                 console.log "ADD", node.id, node.constructor.name
@@ -40,10 +40,10 @@ define [], () ->
 
             # update all nodes
             for node in @children
-                node._update ctx, t
+                node._update ctx, t, now
 
             # update self
-            @update ctx, t
+            @update ctx, t, now
 
         update: (ctx, t) -> return
 
@@ -52,12 +52,12 @@ define [], () ->
 
         constructor: (@x=0, @y=0, @width=0, @height=0) ->
             super()
-            
-        _update: (ctx, t) ->
+
+        _update: (ctx, t, now) ->
             ctx.save()
             ctx.translate @x, @y
 
-            super ctx, t
+            super ctx, t, now
 
             ctx.restore()
 
